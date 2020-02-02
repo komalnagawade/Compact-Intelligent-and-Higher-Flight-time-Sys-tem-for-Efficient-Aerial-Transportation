@@ -1,0 +1,395 @@
+This file contains 3 codes 
+1. Testing the python script to give commands from the laptop and make the drone behave according to the python script using dronekit. 
+2. Code to detect from air the QR CODE placed on the ground and display the decoded information on the screen.
+3. This code is the combination of above two codes to hower the drone and then detect the QR CODE and then land.
+
+                    
+
+                    
+
+
+
+
+
+             CODE 1
+
+                    /*
+
+                    * Project Name: 	        Compact, Intelligent and higher endurance flight time system for efficient aerial transportation
+                    * Author List: 		komal nagawade
+                    * Filename: 		takeoff_and_land.py
+                    * Functions: 		time() , arm_and_take0ff(), connect(), .add_argument(), .parse_args() ,VehicleMode(),
+                                                LocationGlobalRelative  
+
+                    * Global Variables:	print()
+                    *
+                    */
+
+                   from dronekit import connect, VehicleMode, LocationGlobalRelative 
+                   from pymavlink import mavutil
+                   import time
+                   import argparse  
+                   parser = argparse.ArgumentParser()
+                   parser.add_argument('--connect', default='127.0.0.1:14550')
+                   args = parser.parse_args()
+
+                    /*
+                    * Function Name:	time()
+                    * Input:		time in seconds given to the given loop 
+                    * Output:		The vehicle howers for that specified time or sleeps afterlanding
+                    * Logic:		NONE
+                    * Example Call:		time.sleep(1)
+                    *
+                    */
+                   
+
+
+
+                    # Connect to the Vehicle
+                    print 'Connecting to vehicle on: %s' % args.connect
+                    vehicle = connect(args.connect, baud=57600, wait_ready=True)
+
+                   # Function to arm and then takeoff to a user specified altitude
+                   def arm_and_takeoff(aTargetAltitude):
+
+                   print "Basic pre-arm checks"
+                   # Don't let the user try to arm until autopilot is ready
+                   while not vehicle.is_armable:
+                   print " Waiting for vehicle to initialise..."
+                   time.sleep(1)
+        
+                   print "Arming motors"
+  
+
+                  # Copter should arm in GUIDED mode
+                  vehicle.mode    = VehicleMode("GUIDED")
+                  vehicle.armed   = True
+
+                  while not vehicle.armed:
+                  print " Waiting for arming..."
+                  time.sleep(1)
+
+                  print "Taking off!"
+                  vehicle.simple_takeoff(aTargetAltitude)
+                  # Take off to target altitude and altitide is in meters
+
+
+                  # Check that vehicle has reached takeoff altitude
+                  while True:
+                  print " Altitude: ", vehicle.location.global_relative_frame
+                  #Break and return from function just below target altitude        
+    
+                  if vehicle.location.global_relative_frame.alt>=aTargetAltitude*0.95: 
+                  print "Reached target altitude"
+                  break
+                  time.sleep(1)
+
+                  # Initialize the takeoff sequence to 6m
+                  arm_and_takeoff(6)
+
+                  print("Take off complete")
+
+                  # Hover for 10 seconds
+                  time.sleep(10)
+
+                  print("Now let's land")
+                  vehicle.mode = VehicleMode("LAND")
+
+                  # Close vehicle object
+                  vehicle.close()
+
+
+
+
+                    /*
+                    * Function Name:	LocationGlobalRelative 
+                    * Input:		desired altitude
+                    * Output:		drone will reach the input altitude and hower for given time
+                    * Logic:		Ask the user to input the desired height for the drone to hower
+                    *			and call the function LocationGlobalRelative() 
+                    * Example Call:     arm_and_takeoff(6)
+                    *
+                    */
+                        
+
+
+
+
+
+
+
+
+
+             CODE 2
+
+
+                    /*
+
+                    * Project Name: 	        Compact, Intelligent and higher endurance flight time system for efficient aerial transportation
+                    * Author List: 		komal nagawade
+                    * Filename: 		qr_detect.py
+                    * Functions: 		barcodeReader(), decode(), cv2.putText(), cv2.VideoCapture(),  cv2.imshow()
+
+                    * Global Variables:	print()
+                    *
+                    */
+
+                 from pyzbar.pyzbar import decode
+                 import cv2
+                 import numpy as np
+                   
+                     /*
+                    * Function Name:	barcodeReader()
+                    * Input:		image of  the barcodeis taken as input 
+                    * Output:		The input image is decoded after the image is converted to gray scale 
+                    * Logic:		NONE
+                    * Example Call:	def barcodeReader(image, bgr):	
+                    *
+                    */
+
+
+                     /*
+                    * Function Name:	decode()
+                    * Input:		image of  the barcodeis taken as input and decoded 
+                    * Output:		The input image is decoded after the image is converted to gray scale 
+                    * Logic:		NONE
+                    * Example Call:	barcodes = decode(gray_img)
+                    *
+                    */
+
+                  
+                    /*
+                    * Function Name:    cv2.putText()	
+                    * Input:		decodedcode is provided as input
+                    * Output:		the decode info is printed on the screen in text format
+                    * Logic:		NONE
+                    * Example Call:	barcodes = decode(gray_img)
+                    *
+                    */
+
+                   
+
+                    /*
+                    * Function Name:    cv2.VideoCapture()	
+                    * Input:		live video stream from the pi camera
+                    * Output:		video captured is provided frameby frame 
+                    * Logic:		NONE
+                    * Example Call:	cap = cv2.VideoCapture(0)
+                    *
+                    */
+
+           
+                      /*
+                    * Function Name:    cv2.imshow()(optional)	
+                    * Input:		live video stream from the pi camera
+                    * Output:		decoded video is shown with a marker surrounding the barcode 
+                    * Logic:		NONE
+                    * Example Call:	cv2.imshow('Barcode reader', frame)
+                    *
+                    */
+
+
+                   
+
+
+                    # the image is taken and converted to grayscale and then decoded
+                    def barcodeReader(image, bgr):
+                    gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                    barcodes = decode(gray_img)
+             
+
+
+                    #thedecoded is located and coloured border is drawn around the qrcode with specific height and thickness
+                   for decodedObject in barcodes:
+                       points = decodedObject.polygon
+
+                       pts = np.array(points, np.int32)
+                       pts = pts.reshape((-1, 1, 2))
+                   cv2.polylines(image, [pts], True, (0, 255, 0), 3)
+
+                   for bc in barcodes:
+                       cv2.putText(frame, bc.data.decode("utf-8") + " - " + bc.type, (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, bgr, 2)
+
+                  return "Barcode: {} - Type: {}".format(bc.data.decode("utf-8"), bc.type)
+
+
+                   bgr = (8, 70, 208)
+
+                  #check if the barcodeis present in the frame andif present then point it and print the info on the screen 
+
+
+                   cap = cv2.VideoCapture(0)
+                   while (True):
+                   ret, frame = cap.read()
+                   barcode = barcodeReader(frame, bgr)
+                   print(barcode)
+                   cv2.imshow('Barcode reader', frame)
+                   code = cv2.waitKey(10)
+                   if code == ord('q'):
+                   break
+
+
+
+
+
+
+
+
+
+
+
+               CODE 3 :combination of above two codes ,all the functions and modules are same as in above both codes
+
+
+
+                 /*
+
+                    * Project Name: 	        Compact, Intelligent and higher endurance flight time system for efficient aerial transportation
+                    * Author List: 		komal nagawade
+                    * Filename: 		final.py
+                    * Functions: 		time() , arm_and_take0ff(), connect(), .add_argument(), .parse_args() ,VehicleMode(),
+                                                LocationGlobalRelative, barcodeReader(), decode(), cv2.putText(), cv2.VideoCapture(),  cv2.imshow()  
+
+                    * Global Variables:	print()
+                    *
+                    */
+
+                   from dronekit import connect, VehicleMode, LocationGlobalRelative 
+                   from pymavlink import mavutil
+                   import time
+                   import argparse  
+                   
+                   from pyzbar.pyzbar import decode
+                   import cv2
+                   import numpy as np
+
+                   parser = argparse.ArgumentParser()
+                   parser.add_argument('--connect', default='127.0.0.1:14550')
+                   args = parser.parse_args()
+
+                    /*
+                    * Function Name:	time()
+                    * Input:		time in seconds given to the given loop 
+                    * Output:		The vehicle howers for that specified time or sleeps afterlanding
+                    * Logic:		NONE
+                    * Example Call:		time.sleep(1)
+                    *
+                    */
+                   
+
+
+
+                    # Connect to the Vehicle
+                    print 'Connecting to vehicle on: %s' % args.connect
+                    vehicle = connect(args.connect, baud=57600, wait_ready=True)
+
+                   # Function to arm and then takeoff to a user specified altitude
+                   def arm_and_takeoff(aTargetAltitude):
+
+                   print "Basic pre-arm checks"
+                   # Don't let the user try to arm until autopilot is ready
+                   while not vehicle.is_armable:
+                   print " Waiting for vehicle to initialise..."
+                   time.sleep(1)
+        
+                   print "Arming motors"
+  
+
+                  # Copter should arm in GUIDED mode
+                  vehicle.mode    = VehicleMode("GUIDED")
+                  vehicle.armed   = True
+
+                  while not vehicle.armed:
+                  print " Waiting for arming..."
+                  time.sleep(1)
+
+                  print "Taking off!"
+                  vehicle.simple_takeoff(aTargetAltitude)
+                  # Take off to target altitude and altitide is in meters
+
+
+                  # Check that vehicle has reached takeoff altitude
+                  while True:
+                  print " Altitude: ", vehicle.location.global_relative_frame
+                  #Break and return from function just below target altitude        
+    
+                  if vehicle.location.global_relative_frame.alt>=aTargetAltitude*0.95: 
+                  print "Reached target altitude"
+                  break
+                  time.sleep(1)
+
+                  # Initialize the takeoff sequence to 6m
+                  arm_and_takeoff(6)
+
+                  print("Take off complete")
+                   
+                  
+                  if barcodeReader=(specific code)
+                     print("Now let's land")
+                     #immediate landing
+                     vehicle.mode = VehicleMode("LAND")
+
+                   elif
+                     # Hover for 10 seconds
+                     time.sleep(10)
+                    vehicle.mode = VehicleMode("LAND")
+
+
+                  # Close vehicle object
+                  vehicle.close()
+
+                  
+
+
+
+
+
+                  
+                    # the image is taken and converted to grayscale and then decoded
+                    def barcodeReader(image, bgr):
+                    gray_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                    barcodes = decode(gray_img)
+             
+
+
+                    #thedecoded is located and coloured border is drawn around the qrcode with specific height and thickness
+                   for decodedObject in barcodes:
+                       points = decodedObject.polygon
+
+                       pts = np.array(points, np.int32)
+                       pts = pts.reshape((-1, 1, 2))
+                   cv2.polylines(image, [pts], True, (0, 255, 0), 3)
+
+                   for bc in barcodes:
+                       cv2.putText(frame, bc.data.decode("utf-8") + " - " + bc.type, (30, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, bgr, 2)
+
+                  return "Barcode: {} - Type: {}".format(bc.data.decode("utf-8"), bc.type)
+
+
+                   bgr = (8, 70, 208)
+
+                  #check if the barcodeis present in the frame andif present then point it and print the info on the screen 
+
+
+                   cap = cv2.VideoCapture(0)
+                   while (True):
+                   ret, frame = cap.read()
+                   barcode = barcodeReader(frame, bgr)
+                   print(barcode)
+                   cv2.imshow('Barcode reader', frame)
+                   code = cv2.waitKey(10)
+                   if code == ord('q'):
+                   break
+
+
+
+
+
+
+
+                  
+
+                        
+
+
+                       
